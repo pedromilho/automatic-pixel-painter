@@ -12,7 +12,6 @@ from collections import Counter
 import ctypes
 from dataclasses import dataclass
 from functools import lru_cache
-import json
 from pathlib import Path
 import time
 import winsound
@@ -59,16 +58,8 @@ def parse_roi(value: str) -> tuple[int, int, int, int]:
 
 
 def active_canvas_window(title_hint: str | None = None, handle: int | None = None):
-    """Ativa a janela do mapa por título genérico ou identificador já capturado."""
-    if handle is None and (title_hint is None or not title_hint.strip()):
-        settings = Path(__file__).with_name("janela.local.json")
-        if settings.is_file():
-            try:
-                title_hint = json.loads(settings.read_text(encoding="utf-8")).get("title_fragment", "")
-            except (ValueError, AttributeError) as exc:
-                raise RuntimeError("Configuração local da janela inválida") from exc
-    hint = (title_hint or "").strip().casefold()
-    default_hints = ("pixel art", "paint the world")
+    """Ativa a janela do mapa pelo título ou identificador já capturado."""
+    hint = (title_hint or "").strip().casefold() or "wplace"
 
     def matches(win):
         if win.width <= 500 or win.height <= 400:
@@ -76,13 +67,13 @@ def active_canvas_window(title_hint: str | None = None, handle: int | None = Non
         if handle is not None:
             return getattr(win, "_hWnd", None) == handle
         title = win.title.casefold()
-        return hint in title if hint else any(part in title for part in default_hints)
+        return hint in title
 
     windows = [
         win for win in pygetwindow.getAllWindows() if matches(win)
     ]
     if not windows:
-        raise RuntimeError("Janela do mapa não encontrada. Informe parte do título dela nas configurações")
+        raise RuntimeError("Janela do mapa não encontrada. Abra o navegador e selecione a aba do mapa")
     win = max(windows, key=lambda item: item.width * item.height)
     if win.isMinimized:
         win.restore()

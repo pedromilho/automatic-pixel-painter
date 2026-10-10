@@ -63,4 +63,4 @@ Pressione **Ctrl+C** no terminal ou mova o cursor para o canto superior esquerdo
 
 ## Janela do mapa
 
-A instalação atual mantém um trecho do título original da janela em `janela.local.json`, arquivo ignorado pelo Git. Em outro computador, crie o arquivo com `{"title_fragment": "parte do título da janela"}`. Sem ele, o programa tenta localizar a janela pelos termos genéricos do título. Na linha de comando, também é possível informar `--window-title "trecho do título"`.
+A janela do mapa é encontrada automaticamente pelo título. Deixe a aba do mapa selecionada no navegador antes de capturar. Não é necessário criar um arquivo de configuração. Na linha de comando, é possível informar outro título com `--window-title "trecho do título"`.
