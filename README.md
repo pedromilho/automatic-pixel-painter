@@ -1,3 +1,5 @@
+foi feito com ajuda de ia e tenho 0 comprometimento. atualização desse projeto vai depender da minha continuidade jogando no wplace
+
 # Assistente de Pixels
 
 Aplicativo local para capturar o mapa, detectar os marcadores quadrados de uma camada de referência, conferir uma prévia e pintar um lote de pixels. A interface oferece os modos **Cor por cor** e **Cor específica**.
