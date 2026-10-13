@@ -26,7 +26,7 @@ Também é possível iniciar com `python pixel_server.py`. O servidor usa `127.0
 - **Cor específica:** deixe somente a cor desejada visível na camada de referência e selecione a mesma cor na paleta. O programa clica uma vez em cada marcador, sem usar o color picker.
 - **Cor por cor:** deixe as cores desejadas visíveis. Para cada marcador, o programa aciona o color picker, clica para coletar a cor e clica novamente para pintar. A posição do color picker é conferida a cada pixel; se o ícone não for encontrado, o lote é interrompido.
 
-Mantenha `color_picker_modelo.png` e `color_picker_modelo_novo.png` ao lado dos scripts. A janela flutuante da camada de referência é marcada em vermelho na prévia e excluída da pintura.
+Mantenha os três arquivos `color_picker_modelo*.png` ao lado dos scripts. O programa reconhece a barra compacta com o color picker à esquerda dos controles e os layouts anteriores. A janela flutuante da camada de referência é marcada em vermelho na prévia e excluída da pintura.
 
 ### Prévia e controles
 

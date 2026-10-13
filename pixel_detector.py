@@ -91,8 +91,9 @@ def picker_region(image: np.ndarray) -> tuple[int, int, int, int]:
     height, width = image.shape[:2]
     top = palette_top(image)
     if top is not None and height - top < 150:
-        left = max(0, width // 2 - 20)
-        right = min(width, width // 2 + 400)
+        # O color picker pode ficar antes ou depois dos controles de pintura.
+        left = max(0, round(width * 0.30))
+        right = min(width, round(width * 0.75))
         return left, top, right - left, min(90, height - top)
     left = max(0, round(width * 0.04))
     top = max(0, (top if top is not None else height - 240) - 19)
@@ -100,7 +101,7 @@ def picker_region(image: np.ndarray) -> tuple[int, int, int, int]:
     return left, top, right - left, min(110, height - top)
 
 
-@lru_cache(maxsize=2)
+@lru_cache(maxsize=3)
 def picker_template(name: str) -> np.ndarray:
     path = Path(__file__).with_name(name)
     template = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
@@ -114,7 +115,8 @@ def locate_picker(image: np.ndarray, origin: tuple[int, int] = (0, 0)) -> tuple[
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     best = (-1.0, 0, 0)
     for name, threshold in (("color_picker_modelo.png", 160),
-                            ("color_picker_modelo_novo.png", 110)):
+                            ("color_picker_modelo_novo.png", 110),
+                            ("color_picker_modelo_compacto.png", 110)):
         mask = np.uint8(gray > threshold)
         base = np.uint8(picker_template(name) > threshold)
         for scale in (1.0, 0.9, 1.1, 0.8, 1.2):
@@ -146,9 +148,10 @@ def palette_top(image: np.ndarray) -> int | None:
     """Acha a barra pelo color picker; usa faixas escuras apenas como reserva."""
     height, width = image.shape[:2]
 
-    # O color picker pertence à barra e não à arte. A busca separada dos dois
+    # O color picker pertence à barra e não à arte. A busca separada dos
     # layouts evita que uma faixa escura do mapa seja tomada pela paleta.
     for left, top, right, bottom, offset in (
+        (0.30, 0.90, 0.50, 0.99, 28),  # Barra baixa, color picker à esquerda.
         (0.50, 0.84, 0.75, 0.99, 42),  # Barra compacta, no centro.
         (0.05, 0.70, 0.35, 0.90, 35),  # Paleta antiga, à esquerda.
     ):
