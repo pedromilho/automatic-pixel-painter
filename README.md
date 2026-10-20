@@ -2,7 +2,7 @@ foi feito com ajuda de ia e tenho 0 comprometimento. atualização desse projeto
 
 # Assistente de Pixels
 
-Aplicativo local para capturar o mapa, detectar os marcadores quadrados de uma camada de referência, conferir uma prévia e pintar um lote de pixels. A interface oferece os modos **Cor por cor**, **Cor específica** e **V2**.
+Aplicativo local para capturar o mapa, detectar os marcadores quadrados de uma camada de referência, conferir uma prévia e pintar um lote de pixels. A interface oferece os modos **Cor por cor** e **Cor específica**.
 
 ## Instalação
 
@@ -23,10 +23,9 @@ Também é possível iniciar com `python pixel_server.py`. O servidor usa `127.0
 
 ### Modos de pintura
 
-- **V2:** separa os marcadores pela cor dominante no centro de cada quadradinho, sem procurar nomes ou juntar tons parecidos. Dentro da opção, escolha **Menos pixels primeiro** ou **Mais pixels primeiro**. O mouse aciona o color picker e coleta a cor no primeiro marcador do grupo; depois pinta todos os pixels desse grupo antes de coletar a próxima cor. A prévia informa o total de cores. Cores são comparadas conforme aparecem na captura; transparência ou variação visual pode separar uma mesma cor em mais de um grupo.
-- No V2, lotes seguintes preservam a sequência e coletam novamente a cor do primeiro pixel restante. Se mudar a ordem ou o modo, somente os pixels restantes são reordenados, sem repetir os concluídos. Alterar a área ou capturar novamente reinicia a sequência.
+- **Cor por cor:** separa os marcadores pela cor dominante no centro de cada quadradinho, sem procurar nomes ou juntar tons parecidos. Dentro da opção, escolha **Menos pixels primeiro** ou **Mais pixels primeiro**. O mouse aciona o color picker e coleta a cor no primeiro marcador do grupo; depois pinta todos os pixels desse grupo antes de coletar a próxima cor. A prévia informa o total de cores. Cores são comparadas conforme aparecem na captura; transparência ou variação visual pode separar uma mesma cor em mais de um grupo.
+- Em Cor por cor, lotes seguintes preservam a sequência e coletam novamente a cor do primeiro pixel restante. Se mudar a ordem ou o modo, somente os pixels restantes são reordenados, sem repetir os concluídos. Alterar a área ou capturar novamente reinicia a sequência.
 - **Cor específica:** deixe somente a cor desejada visível na camada de referência e selecione a mesma cor na paleta. O programa clica uma vez em cada marcador, sem usar o color picker.
-- **Cor por cor:** deixe as cores desejadas visíveis. Para cada marcador, o programa aciona o color picker, clica para coletar a cor e clica novamente para pintar. A posição do color picker é conferida a cada pixel; se o ícone não for encontrado, o lote é interrompido.
 
 Mantenha os três arquivos `color_picker_modelo*.png` ao lado dos scripts. O programa reconhece a barra compacta com o color picker à esquerda dos controles e os layouts anteriores. A janela flutuante da camada de referência é marcada em vermelho na prévia e excluída da pintura.
 

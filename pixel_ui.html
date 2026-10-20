@@ -23,7 +23,7 @@
     .option:has(input:checked) { border-color:#67c7ff; box-shadow:0 0 0 1px #67c7ff inset; background:#17304b; }
     .option input { accent-color:#7bd5ff; margin-right:8px; }
     .option strong { font-size:14px; }
-    .option select { display:block; width:100%; margin-top:10px; padding:9px; border:1px solid #455a7b; border-radius:8px; background:#10192b; color:#ecf2ff; }
+    .option select { display:block; width:calc(100% - 24px); margin:10px 0 0 24px; padding:9px; border:1px solid #455a7b; border-radius:8px; background:#10192b; color:#ecf2ff; }
     .option span { display:block; margin:6px 0 0 24px; color:#aebed3; font-size:12px; line-height:1.45; }
     label.caption { display:block; font-weight:700; font-size:13px; margin-bottom:9px; }
     .speedrow { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px; }
@@ -99,13 +99,12 @@
     <section class="card" aria-label="Controles">
       <h2>Configuração</h2>
       <div class="options">
-        <label class="option"><input type="radio" name="mode" value="per_pixel" checked><strong>Cor por cor</strong><span>Para cada quadradinho, ativa o color picker, coleta a cor e marca o pixel. Aceita várias cores visíveis.</span></label>
-        <label class="option"><input type="radio" name="mode" value="specific"><strong>Cor específica</strong><span>Deixe apenas uma cor visível na camada de referência e selecione a mesma cor na paleta. Um clique por pixel.</span></label>
         <div class="option">
-          <label><input type="radio" name="mode" value="grouped"><strong>V2</strong><span>Agrupa os pixels pela cor. Coleta uma vez com o color picker e termina essa cor antes de passar à próxima.</span></label>
+          <label><input type="radio" name="mode" value="grouped" checked><strong>Cor por cor</strong><span>Agrupa os pixels pela cor. Coleta uma vez com o color picker e termina essa cor antes de passar à próxima.</span></label>
           <label for="colorOrder"><span>Começar pelas cores com</span></label>
           <select id="colorOrder"><option value="fewest">Menos pixels primeiro</option><option value="most">Mais pixels primeiro</option></select>
         </div>
+        <label class="option"><input type="radio" name="mode" value="specific"><strong>Cor específica</strong><span>Deixe apenas uma cor visível na camada de referência e selecione a mesma cor na paleta. Um clique por pixel.</span></label>
       </div>
       <div class="speedrow"><label class="caption" for="speed">Velocidade</label><output id="speedvalue" for="speed">6 / 10</output></div>
       <input id="speed" type="range" min="1" max="10" value="6">
@@ -271,8 +270,7 @@
     el('speedvalue').textContent=speed.value+' / 10';
     el('speedhelp').textContent=mode==='specific'
       ? 'Cor específica: ajusta a pausa entre cliques. No nível 10, a pausa programada é de cerca de 0,04 s.'
-      : mode==='grouped' ? 'V2: ajusta as pausas de coleta por grupo e pintura dos pixels.'
-      : 'Cor por cor: ajusta as pausas do color picker, coleta e pintura.';
+      : 'Cor por cor: ajusta as pausas de coleta por grupo e pintura dos pixels.';
   }
   function clampPan() {
     const excessX=Math.max(0,preview.offsetWidth*zoom-wrap.clientWidth);
