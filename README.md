@@ -2,7 +2,7 @@ foi feito com ajuda de ia e tenho 0 comprometimento. atualização desse projeto
 
 # Assistente de Pixels
 
-Aplicativo local para capturar o mapa, detectar os marcadores quadrados de uma camada de referência, conferir uma prévia e pintar um lote de pixels. A interface oferece os modos **Cor por cor** e **Cor específica**.
+Aplicativo local para capturar o mapa, detectar os marcadores quadrados de uma camada de referência, conferir uma prévia e pintar um lote de pixels. A interface oferece os modos **Cor por cor**, **Cor específica** e **V2**.
 
 ## Instalação
 
@@ -23,6 +23,8 @@ Também é possível iniciar com `python pixel_server.py`. O servidor usa `127.0
 
 ### Modos de pintura
 
+- **V2:** separa os marcadores pela cor dominante no centro de cada quadradinho, sem procurar nomes ou juntar tons parecidos. Dentro da opção, escolha **Menos pixels primeiro** ou **Mais pixels primeiro**. O mouse aciona o color picker e coleta a cor no primeiro marcador do grupo; depois pinta todos os pixels desse grupo antes de coletar a próxima cor. A prévia informa o total de cores. Cores são comparadas conforme aparecem na captura; transparência ou variação visual pode separar uma mesma cor em mais de um grupo.
+- No V2, lotes seguintes preservam a sequência e coletam novamente a cor do primeiro pixel restante. Se mudar a ordem ou o modo, somente os pixels restantes são reordenados, sem repetir os concluídos. Alterar a área ou capturar novamente reinicia a sequência.
 - **Cor específica:** deixe somente a cor desejada visível na camada de referência e selecione a mesma cor na paleta. O programa clica uma vez em cada marcador, sem usar o color picker.
 - **Cor por cor:** deixe as cores desejadas visíveis. Para cada marcador, o programa aciona o color picker, clica para coletar a cor e clica novamente para pintar. A posição do color picker é conferida a cada pixel; se o ícone não for encontrado, o lote é interrompido.
 
@@ -30,6 +32,7 @@ Mantenha os três arquivos `color_picker_modelo*.png` ao lado dos scripts. O pro
 
 ### Prévia e controles
 
+- A área **Cores identificadas**, abaixo do ajuste manual da área de detecção, mostra uma amostra de cada cor, o total de pixels e quantos restam. Desmarque a caixa da cor para deixá-la de fora da pintura em qualquer modo. O limite do lote considera somente as cores incluídas. Cores excluídas continuam pendentes e podem ser marcadas novamente para outro lote; uma nova captura, alteração da área ou recarga da interface inclui todas as cores novamente.
 - Use a roda do mouse para ampliar a prévia. Com zoom, arraste com o botão esquerdo para mover a imagem. Use **Shift + arrastar** para selecionar outra área em qualquer zoom.
 - Os sliders **Tamanho X/Y**, abaixo da prévia, ajustam as dimensões da área. **Posição X/Y** deslocam a área sem mudar seu tamanho. O contorno azul mostra o ajuste antes de soltar o slider. Os valores são guardados no navegador e reaplicados nas próximas capturas. **Área automática** limpa o ajuste e restaura o recorte calculado pelo programa.
 - O zoom da prévia é apenas visual. A seleção personalizada altera somente a área analisada na captura atual.

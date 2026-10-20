@@ -419,6 +419,27 @@ def detect_squares(image: np.ndarray, roi: tuple[int, int, int, int]) -> tuple[l
     return sorted(candidates, key=lambda sq: (sq.y, sq.x)), (pitch_x, pitch_y)
 
 
+def marker_colors(image: np.ndarray, squares: list[Square]) -> dict[Square, tuple[int, int, int]]:
+    """Cor BGR dominante no centro, sem quantização que una tons diferentes."""
+    colors = {}
+    for square in squares:
+        patch = image[max(0, square.y - 1):square.y + 2,
+                      max(0, square.x - 1):square.x + 2]
+        values, counts = np.unique(patch.reshape(-1, 3), axis=0, return_counts=True)
+        colors[square] = tuple(map(int, values[counts.argmax()]))
+    return colors
+
+
+def order_by_color(squares, colors, order):
+    if order not in ("fewest", "most"):
+        raise ValueError("Escolha a ordem das cores")
+    groups = {}
+    for square in squares:
+        groups.setdefault(colors[square], []).append(square)
+    ordered = sorted(groups.values(), key=lambda group: len(group), reverse=order == "most")
+    return [square for group in ordered for square in group]
+
+
 def annotated(image: np.ndarray, roi: tuple[int, int, int, int], squares: list[Square],
               picker_point: tuple[int, int] | None = None) -> np.ndarray:
     preview = image.copy()
@@ -445,9 +466,12 @@ def annotated(image: np.ndarray, roi: tuple[int, int, int, int], squares: list[S
 def paint(squares: list[Square], limit: int, timing: Timing, picker: str,
           debug_pick: Path | None, mode: str = "per_pixel",
           on_progress=None, stop_event=None,
-          window_title: str | None = None, window_handle: int | None = None) -> int:
-    if mode not in ("per_pixel", "specific"):
+          window_title: str | None = None, window_handle: int | None = None,
+          colors=None) -> int:
+    if mode not in ("per_pixel", "specific", "grouped"):
         raise ValueError("Modo de pintura desconhecido")
+    if mode == "grouped" and (colors is None or any(sq not in colors for sq in squares[:limit])):
+        raise ValueError("Capture as cores antes de pintar em V2")
     target = active_canvas_window(window_title, window_handle)
     pyautogui.FAILSAFE = True  # Mova o cursor ao canto superior esquerdo para parar.
     start_image = capture_bgr()
@@ -457,8 +481,8 @@ def paint(squares: list[Square], limit: int, timing: Timing, picker: str,
     if any(overlaps_box(square, current_window) for square in squares[:limit]):
         raise RuntimeError("A janela flutuante cobre pixels da prévia. Capture novamente antes de pintar")
     region = picker_region(start_image)
-    first_picker = locate_picker_in_screen(start_image) if mode == "per_pixel" and picker == "button" else None
-    if mode == "per_pixel":
+    first_picker = locate_picker_in_screen(start_image) if mode != "specific" and picker == "button" else None
+    if mode != "specific":
         print(f"Color picker: {picker}" + (f" em ({first_picker[0]}, {first_picker[1]})" if first_picker else ""))
     else:
         print("Cor específica: usando a cor já selecionada na paleta")
@@ -466,6 +490,7 @@ def paint(squares: list[Square], limit: int, timing: Timing, picker: str,
     old_pause = pyautogui.PAUSE
     pyautogui.PAUSE = timing.input_pause
     completed = 0
+    selected_color = None
     try:
         for index, square in enumerate(squares[:limit], 1):
             if stop_event is not None and stop_event.is_set():
@@ -473,7 +498,7 @@ def paint(squares: list[Square], limit: int, timing: Timing, picker: str,
             foreground = pygetwindow.getActiveWindow()
             if foreground is None or foreground._hWnd != target._hWnd:
                 raise RuntimeError("A janela do mapa perdeu o foco; pintura interrompida")
-            if mode == "specific":
+            if mode == "specific" or (mode == "grouped" and colors[square] == selected_color):
                 pyautogui.moveTo(square.x, square.y, duration=timing.movement)
                 time.sleep(timing.hover)
                 pyautogui.click()
@@ -514,6 +539,8 @@ def paint(squares: list[Square], limit: int, timing: Timing, picker: str,
                 cv2.imwrite(str(debug_pick), capture_bgr())
                 print(f"Captura após o color picker: {debug_pick.resolve()}")
             pyautogui.click()  # Marca o mesmo pixel com a cor selecionada.
+            if mode == "grouped":
+                selected_color = colors[square]
             completed = index
             if on_progress is not None:
                 on_progress(index, min(limit, len(squares)))

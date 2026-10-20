@@ -7,6 +7,8 @@
   <style>
     :root { color-scheme: dark; font-family: Inter, Segoe UI, Arial, sans-serif; background:#0d1321; color:#ecf2ff; }
     * { box-sizing:border-box; }
+    body { -webkit-user-select:none; user-select:none; }
+    .pixel-number, #limit { -webkit-user-select:text; user-select:text; cursor:text; }
     body { margin:0; min-height:100vh; background:radial-gradient(circle at 95% 0%,#1b315a 0,transparent 34%),#0d1321; }
     main { max-width:1240px; margin:auto; padding:30px 24px 44px; }
     header { margin-bottom:24px; }
@@ -21,6 +23,7 @@
     .option:has(input:checked) { border-color:#67c7ff; box-shadow:0 0 0 1px #67c7ff inset; background:#17304b; }
     .option input { accent-color:#7bd5ff; margin-right:8px; }
     .option strong { font-size:14px; }
+    .option select { display:block; width:100%; margin-top:10px; padding:9px; border:1px solid #455a7b; border-radius:8px; background:#10192b; color:#ecf2ff; }
     .option span { display:block; margin:6px 0 0 24px; color:#aebed3; font-size:12px; line-height:1.45; }
     label.caption { display:block; font-weight:700; font-size:13px; margin-bottom:9px; }
     .speedrow { display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px; }
@@ -42,9 +45,9 @@
     .progress { margin-top:12px; height:9px; border-radius:20px; overflow:hidden; background:#0d1626; }
     .progress div { width:0; height:100%; background:linear-gradient(90deg,#66b8ff,#68e1ba); transition:width .25s; }
     .progresslabel { margin-top:8px; text-align:right; color:#a9b8d0; font-size:12px; }
-    .previewhead { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; }
-    .previewhead h2 { margin-bottom:0; }
-    .previewtools { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .previewhead { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:nowrap; overflow-x:auto; }
+    .previewhead h2 { margin-bottom:0; white-space:nowrap; flex-shrink:0; }
+    .previewtools { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; flex-shrink:0; }
     .count { color:#8de5be; font-size:13px; font-weight:700; }
     .zoomvalue { color:#a9b8d0; font-size:12px; font-weight:700; }
     .zoomreset { padding:7px 10px; font-size:12px; }
@@ -67,6 +70,19 @@
     .roi-axis output { text-align:right; color:#83e3ed; }
     .roi-axis input { margin:0; }
     .roi-divider { border-top:1px solid #354b69; margin-top:15px; padding-top:5px; }
+    .colors-panel { margin-top:18px; padding:16px; border:1px solid #455f82; border-radius:11px; background:#111b2e; }
+    .colors-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .colors-panel h3 { margin:0; font-size:16px; }
+    .colors-head .count { white-space:nowrap; font-size:12px; }
+    .colors-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .colors-actions button { padding:6px 8px; font-size:11px; white-space:nowrap; }
+    .colors-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); gap:6px; margin-top:10px; max-height:360px; overflow:auto; }
+    .color-item { display:flex; align-items:center; gap:7px; padding:8px; border:1px solid #455a7b; border-radius:7px; cursor:pointer; background:#18283e; }
+    .color-item:has(input:not(:checked)) { background:#101827; border-style:dashed; }
+    .color-item input { width:16px; height:16px; margin:0; accent-color:#73d9ed; flex-shrink:0; }
+    .color-swatch { width:24px; height:24px; border:1px solid #a9b8d0; border-radius:3px; flex-shrink:0; }
+    .color-info { display:flex; align-items:center; justify-content:space-between; gap:7px; flex:1; min-width:0; font-size:12px; font-variant-numeric:tabular-nums; }
+    .color-info small { color:#aebed3; font-size:11px; overflow-wrap:anywhere; }
     @media(max-width:600px) { .roi-axis { grid-template-columns:1fr 55px; } .roi-axis input { grid-column:1 / -1; grid-row:2; } }
     .foot { margin-top:14px; color:#91a8c4; font-size:12px; }
     @media(max-width:820px) { .grid { grid-template-columns:1fr; } main { padding:20px 14px 32px; } }
@@ -85,6 +101,11 @@
       <div class="options">
         <label class="option"><input type="radio" name="mode" value="per_pixel" checked><strong>Cor por cor</strong><span>Para cada quadradinho, ativa o color picker, coleta a cor e marca o pixel. Aceita várias cores visíveis.</span></label>
         <label class="option"><input type="radio" name="mode" value="specific"><strong>Cor específica</strong><span>Deixe apenas uma cor visível na camada de referência e selecione a mesma cor na paleta. Um clique por pixel.</span></label>
+        <div class="option">
+          <label><input type="radio" name="mode" value="grouped"><strong>V2</strong><span>Agrupa os pixels pela cor. Coleta uma vez com o color picker e termina essa cor antes de passar à próxima.</span></label>
+          <label for="colorOrder"><span>Começar pelas cores com</span></label>
+          <select id="colorOrder"><option value="fewest">Menos pixels primeiro</option><option value="most">Mais pixels primeiro</option></select>
+        </div>
       </div>
       <div class="speedrow"><label class="caption" for="speed">Velocidade</label><output id="speedvalue" for="speed">6 / 10</output></div>
       <input id="speed" type="range" min="1" max="10" value="6">
@@ -98,7 +119,7 @@
       </div>
       <div id="status" class="status" role="status" aria-live="polite">Abra o mapa em modo de pintura, com a paleta visível, e clique em Capturar mapa.</div>
       <div class="progress"><div id="bar"></div></div>
-      <div id="progresslabel" class="progresslabel">0 / 0</div>
+      <div id="progresslabel" class="progresslabel"><span class="pixel-number">0</span> / <span class="pixel-number">0</span></div>
     </section>
     <section class="card" aria-label="Prévia">
       <div class="previewhead"><h2>Prévia da captura</h2><div class="previewtools"><span id="count" class="count">Nenhuma captura</span><span id="zoomvalue" class="zoomvalue">100%</span><button id="resetzoom" type="button" class="secondary zoomreset" disabled>Redefinir zoom</button></div></div>
@@ -113,6 +134,10 @@
         <div class="roi-axis"><label for="roiPosX">Posição X</label><input id="roiPosX" type="range" min="0" max="100" value="0" disabled><output id="roiPosXValue" for="roiPosX">—</output></div>
         <div class="roi-axis"><label for="roiPosY">Posição Y</label><input id="roiPosY" type="range" min="0" max="100" value="0" disabled><output id="roiPosYValue" for="roiPosY">—</output></div>
       </div>
+      <section class="colors-panel" aria-labelledby="colorsTitle">
+        <div class="colors-head"><h3 id="colorsTitle">Cores identificadas</h3><div class="colors-actions"><span id="colorCount" class="count" title="Cores concluídas / selecionadas" aria-live="polite">0/0</span><button id="disableColors" type="button" class="secondary" disabled>Desabilitar todos</button></div></div>
+        <div id="colorsList" class="colors-list"></div>
+      </section>
       <p class="foot">Mudou a cor filtrada, o zoom ou a posição do mapa? Capture de novo.</p>
     </section>
   </div>
@@ -132,6 +157,32 @@
   const roiPosXValue=el('roiPosXValue'), roiPosYValue=el('roiPosYValue');
   const roiReset=el('roiReset'), boundsKey='pixel-roi-bounds';
   let plan = null, running = false, busy = false, drag = null;
+  const excludedColors = new Set();
+  // Wplace palette: https://github.com/j0code/wplace-api/blob/main/Wplace%20API.md
+  // Names are display-only: grouping and selection still use the captured RGB.
+  const colorNames = {
+    '#000000':'Black', '#3c3c3c':'Dark Gray', '#787878':'Gray',
+    '#d2d2d2':'Light Gray', '#ffffff':'White', '#600018':'Deep Red',
+    '#ed1c24':'Red', '#ff7f27':'Orange', '#f6aa09':'Gold',
+    '#f9dd3b':'Yellow', '#fffabc':'Light Yellow', '#0eb968':'Dark Green',
+    '#13e67b':'Green', '#87ff5e':'Light Green', '#0c816e':'Dark Teal',
+    '#10aea6':'Teal', '#13e1be':'Light Teal', '#28509e':'Dark Blue',
+    '#4093e4':'Blue', '#60f7f2':'Cyan', '#6b50f6':'Indigo',
+    '#99b1fb':'Light Indigo', '#780c99':'Dark Purple', '#aa38b9':'Purple',
+    '#e09ff9':'Light Purple', '#cb007a':'Dark Pink', '#ec1f80':'Pink',
+    '#f38da9':'Light Pink', '#684634':'Dark Brown', '#95682a':'Brown',
+    '#f8b277':'Beige', '#aaaaaa':'Medium Gray', '#a50e1e':'Dark Red',
+    '#fa8072':'Light Red', '#e45c1a':'Dark Orange', '#d6b594':'Light Tan',
+    '#9c8431':'Dark Goldenrod', '#c5ad31':'Goldenrod', '#e8d45f':'Light Goldenrod',
+    '#4a6b3a':'Dark Olive', '#5a944a':'Olive', '#84c573':'Light Olive',
+    '#0f799f':'Dark Cyan', '#bbfaf2':'Light Cyan', '#7dc7ff':'Light Blue',
+    '#4d31b8':'Dark Indigo', '#4a4284':'Dark Slate Blue', '#7a71c4':'Slate Blue',
+    '#b5aef1':'Light Slate Blue', '#dba463':'Light Brown', '#d18051':'Dark Beige',
+    '#ffc5a5':'Light Beige', '#9b5249':'Dark Peach', '#d18078':'Peach',
+    '#fab6a4':'Light Peach', '#7b6352':'Dark Tan', '#9c846b':'Tan',
+    '#333941':'Dark Slate', '#6d758d':'Slate', '#b3b9d1':'Light Slate',
+    '#6d643f':'Dark Stone', '#948c6b':'Stone', '#cdc59e':'Light Stone'
+  };
   let zoom=1, panX=0, panY=0;
 
   window.addEventListener('pagehide',()=>{
@@ -149,27 +200,78 @@
     if (!response.ok) throw new Error(data.error || 'Falha na comunicação local');
     return data;
   }
+  function pixelText(element, value) {
+    element.replaceChildren(...String(value).split(/(\d+)/).map(part=>{
+      if (!/^\d+$/.test(part)) return document.createTextNode(part);
+      const number=document.createElement('span');
+      number.className='pixel-number'; number.textContent=part;
+      return number;
+    }));
+  }
   function message(value, kind='') {
-    const box = el('status'); box.textContent=value; box.className='status'+(kind ? ' '+kind : '');
+    const box = el('status');
+    if (/pixels|quadradinhos/i.test(value)) pixelText(box,value); else box.textContent=value;
+    box.className='status'+(kind ? ' '+kind : '');
   }
   function controls() {
     capture.disabled=busy || running;
     const mode=document.querySelector('input[name=mode]:checked').value;
-    start.disabled=busy || running || !plan || plan.cursor>=plan.count || (mode==='per_pixel' && !plan.picker);
+    start.disabled=busy || running || !plan || selectedRemaining()===0 || (mode!=='specific' && !plan.picker);
+    el('colorOrder').disabled=busy || running || mode!=='grouped';
     stop.disabled=!running;
-    limit.disabled=busy || running || !plan || plan.cursor>=plan.count;
+    limit.disabled=busy || running || !plan || selectedRemaining()===0;
+    el('colorsList').querySelectorAll('input').forEach(input=>input.disabled=busy || running);
+    el('disableColors').disabled=busy || running || !(plan?.colors || []).some(color=>!excludedColors.has(color.hex));
     roiX.disabled=busy || running || !plan || preview.hidden;
     roiY.disabled=busy || running || !plan || preview.hidden;
     roiPosX.disabled=busy || running || !plan || preview.hidden;
     roiPosY.disabled=busy || running || !plan || preview.hidden;
     roiReset.disabled=busy || running || !plan || preview.hidden;
-    document.querySelectorAll('input[name=mode]').forEach(input => input.disabled=running);
+    document.querySelectorAll('input[name=mode]').forEach(input => input.disabled=busy || running);
+  }
+  function selectedRemaining() {
+    return (plan?.colors || []).reduce((sum,color)=>sum+(excludedColors.has(color.hex) ? 0 : color.remaining),0);
+  }
+  function updateColorTotals(resetLimit=false) {
+    const remaining=selectedRemaining();
+    const selected=(plan?.colors || []).filter(color=>!excludedColors.has(color.hex));
+    const finished=selected.filter(color=>color.remaining===0).length;
+    el('colorCount').textContent=finished+'/'+selected.length;
+    el('colorCount').setAttribute('aria-label',finished+' cores concluídas de '+selected.length+' selecionadas');
+    pixelText(el('available'),remaining+' disponíveis · '+(plan ? plan.count-plan.cursor : 0)+' pendentes no total');
+    limit.max=Math.max(1,remaining);
+    limit.value=resetLimit ? Math.max(1,remaining) : Math.max(1,Math.min(Number(limit.value),Math.max(1,remaining)));
+  }
+  function renderColors() {
+    const list=el('colorsList');
+    list.replaceChildren();
+    for (const color of plan?.colors || []) {
+      const row=document.createElement('label'); row.className='color-item';
+      const check=document.createElement('input'); check.type='checkbox'; check.checked=!excludedColors.has(color.hex);
+      const name=colorNames[color.hex.toLowerCase()] || 'Cor não catalogada';
+      check.setAttribute('aria-label','Incluir '+name+' ('+color.hex+')');
+      const swatch=document.createElement('span'); swatch.className='color-swatch'; swatch.style.backgroundColor=color.hex;
+      const info=document.createElement('span'); info.className='color-info';
+      const count=document.createElement('strong'); count.textContent=color.count;
+      count.className='pixel-number';
+      count.addEventListener('click',event=>event.preventDefault());
+      count.title='Quantidade de pixels';
+      count.setAttribute('aria-label',color.count+' pixels');
+      const detail=document.createElement('small'); detail.textContent=name;
+      detail.title=name+' · '+color.hex.toUpperCase();
+      info.append(detail,count); row.append(check,swatch,info); list.append(row);
+      check.addEventListener('change',()=>{
+        if (check.checked) excludedColors.delete(color.hex); else excludedColors.add(color.hex);
+        updateColorTotals(true); controls();
+      });
+    }
   }
   function updateSpeed() {
     const mode = document.querySelector('input[name=mode]:checked').value;
     el('speedvalue').textContent=speed.value+' / 10';
     el('speedhelp').textContent=mode==='specific'
       ? 'Cor específica: ajusta a pausa entre cliques. No nível 10, a pausa programada é de cerca de 0,04 s.'
+      : mode==='grouped' ? 'V2: ajusta as pausas de coleta por grupo e pintura dos pixels.'
       : 'Cor por cor: ajusta as pausas do color picker, coleta e pintura.';
   }
   function clampPan() {
@@ -211,10 +313,10 @@
     updateRoiValues();
   }
   function updateRoiValues() {
-    roiXValue.textContent=roiX.value+' px';
-    roiYValue.textContent=roiY.value+' px';
-    roiPosXValue.textContent=roiPosX.value+' px';
-    roiPosYValue.textContent=roiPosY.value+' px';
+    pixelText(roiXValue,roiX.value+' px');
+    pixelText(roiYValue,roiY.value+' px');
+    pixelText(roiPosXValue,roiPosX.value+' px');
+    pixelText(roiPosYValue,roiPosY.value+' px');
   }
   function savedBounds() {
     try {
@@ -236,17 +338,15 @@
     roiDraft.style.height=(height*image.height/plan.height)+'px';
   }
   function showPlan(next, keepZoom=false) {
+    if (!plan || next.version!==plan.version) excludedColors.clear();
     plan=next;
     roiDraft.style.display='none';
     syncRoiControls();
-    el('count').textContent=next.count+' quadradinhos detectados';
+    pixelText(el('count'),next.count+' pixels');
     el('pickerstatus').textContent=next.picker
       ? 'Color picker localizado em ('+next.picker[0]+', '+next.picker[1]+'). A posição será conferida durante a pintura.'
       : 'Color picker não localizado nesta captura. O modo Cor específica continua disponível.';
-    const remaining=next.count-next.cursor;
-    el('available').textContent=remaining+' restantes de '+next.count;
-    limit.max=Math.max(1,remaining);
-    limit.value=Math.max(1,remaining);
+    renderColors(); updateColorTotals(true);
     preview.onload=()=>{ preview.hidden=false; el('placeholder').hidden=true; wrap.classList.add('ready'); if (keepZoom) {clampPan();applyView();} else resetView(); controls(); };
     preview.src='/api/preview?v='+next.version;
     message(next.message,next.count ? 'success' : 'error');
@@ -256,12 +356,11 @@
     running=data.running;
     if (plan) {
       plan.cursor=data.cursor;
-      el('available').textContent=data.remaining+' restantes de '+plan.count;
-      limit.max=Math.max(1,data.remaining);
-      if (!data.running) limit.value=Math.max(1,data.remaining);
+      plan.colors=data.colors;
+      renderColors(); updateColorTotals(!data.running);
     }
     el('bar').style.width=(data.total ? 100*data.completed/data.total : 0)+'%';
-    el('progresslabel').textContent=data.completed+' / '+data.total;
+    pixelText(el('progresslabel'),data.completed+' / '+data.total);
     if (data.message) message(data.message, !data.running && data.message.startsWith('Pintura interrompida') ? 'error' : '');
     controls();
   }
@@ -278,12 +377,16 @@
   start.addEventListener('click',()=>task(async()=>{
     const mode=document.querySelector('input[name=mode]:checked').value;
     const requested=Number(limit.value);
-    const remaining=plan.count-plan.cursor;
+    const remaining=selectedRemaining();
     if (!Number.isInteger(requested) || requested<1 || requested>remaining) throw new Error('Escolha entre 1 e '+remaining+' pixels.');
-    updateStatus(await api('/api/start',{mode,speed:Number(speed.value),limit:requested,version:plan.version}));
+    updateStatus(await api('/api/start',{mode,color_order:el('colorOrder').value,excluded_colors:[...excludedColors],speed:Number(speed.value),limit:requested,version:plan.version}));
   }));
   stop.addEventListener('click',()=>task(async()=>updateStatus(await api('/api/stop',{}))));
   resetZoom.addEventListener('click',resetView);
+  el('disableColors').addEventListener('click',()=>{
+    for (const color of plan?.colors || []) excludedColors.add(color.hex);
+    renderColors(); updateColorTotals(true); controls();
+  });
   speed.addEventListener('input',updateSpeed);
   document.querySelectorAll('input[name=mode]').forEach(input=>input.addEventListener('change',()=>{updateSpeed();controls();}));
   for (const slider of [roiX,roiY,roiPosX,roiPosY]) {

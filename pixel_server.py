@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import ctypes
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
@@ -28,6 +29,8 @@ from pixel_detector import (
     auto_roi,
     capture_bgr,
     detect_squares,
+    marker_colors,
+    order_by_color,
     locate_picker_in_screen,
     palette_top,
     paint,
@@ -36,6 +39,10 @@ from pixel_detector import (
 
 
 ROOT = Path(__file__).resolve().parent
+
+
+def color_hex(color):
+    return "#{:02x}{:02x}{:02x}".format(*reversed(color))
 
 
 def timing_for(speed: int, mode: str) -> Timing:
@@ -47,7 +54,7 @@ def timing_for(speed: int, mode: str) -> Timing:
         interval = 0.60 * (0.04 / 0.60) ** fraction
         movement = 0.08 * (1 - fraction)
         return Timing(0, movement, 0.02, 0, interval, 0.01, 0)
-    if mode != "per_pixel":
+    if mode not in ("per_pixel", "grouped"):
         raise ValueError("Modo desconhecido")
     base = TIMINGS["fast"]
     factor = 2.2 - 1.85 * fraction
@@ -70,6 +77,8 @@ class Session:
         self.default_roi = None
         self.max_y = 0
         self.squares = []
+        self.colors = {}
+        self.sequence_mode = None
         self.pitch = (None, None)
         self.picker = None
         self.preview_png = b""
@@ -104,6 +113,8 @@ class Session:
             self.roi = (x1, y1, x2, y2)
             self.max_y = bottom
             self.squares = squares
+            self.colors = marker_colors(image, squares)
+            self.sequence_mode = None
             self.pitch = pitch
             self.picker = picker
             self.preview_png = encoded.tobytes()
@@ -112,11 +123,19 @@ class Session:
             self.message = f"{len(squares)} quadradinhos detectados. Confira a prévia."
             return self.plan()
 
+    def color_summary(self):
+        totals = Counter(self.colors.values())
+        remaining = Counter(self.colors[sq] for sq in self.squares[self.cursor:])
+        return [{"hex": color_hex(color), "count": count, "remaining": remaining[color]}
+                for color, count in sorted(totals.items(), key=lambda item: (-item[1], item[0]))]
+
     def plan(self):
         with self.lock:
             return {
                 "ready": self.image is not None,
                 "count": len(self.squares),
+                "color_count": len(set(self.colors.values())),
+                "colors": self.color_summary(),
                 "cursor": self.cursor,
                 "pitch": self.pitch,
                 "picker": self.picker,
@@ -189,9 +208,11 @@ class Session:
             raise ValueError("Área inválida")
         return self._replan(image, roi)
 
-    def start(self, mode, speed, limit, version):
-        if mode not in ("per_pixel", "specific"):
+    def start(self, mode, speed, limit, version, color_order="fewest", excluded_colors=None):
+        if mode not in ("per_pixel", "specific", "grouped"):
             raise ValueError("Escolha um modo de pintura")
+        if color_order not in ("fewest", "most"):
+            raise ValueError("Escolha a ordem das cores")
         speed = int(speed)
         timing = timing_for(speed, mode)
         with self.lock:
@@ -199,17 +220,40 @@ class Session:
                 raise ValueError("Já existe uma pintura em andamento")
             if self.image is None or not self.squares:
                 raise ValueError("Capture e confira uma prévia antes de começar")
-            if mode == "per_pixel" and self.picker is None:
+            if mode != "specific" and self.picker is None:
                 raise ValueError("Não localizei o color picker na captura. Reabra a paleta e capture novamente")
             if int(version) != self.version:
                 raise ValueError("A prévia mudou; atualize a página antes de iniciar")
+            excluded_colors = [] if excluded_colors is None else excluded_colors
+            known_colors = {color_hex(color) for color in self.colors.values()}
+            if (not isinstance(excluded_colors, list) or
+                    any(not isinstance(color, str) or color not in known_colors for color in excluded_colors)):
+                raise ValueError("Seleção de cores inválida")
+            excluded = frozenset(excluded_colors)
             requested = int(limit)
             if requested < 1:
                 raise ValueError("O limite deve ser positivo")
             if self.cursor >= len(self.squares):
                 raise ValueError("Todos os quadradinhos da prévia já foram usados; capture novamente")
             start_cursor = self.cursor
-            squares = self.squares[start_cursor:start_cursor + requested]
+            eligible = sum(color_hex(self.colors[sq]) not in excluded
+                           for sq in self.squares[start_cursor:])
+            if not eligible:
+                raise ValueError("Selecione pelo menos uma cor com pixels restantes")
+            sequence_mode = (mode, color_order if mode == "grouped" else None, excluded)
+            if self.sequence_mode != sequence_mode:
+                remaining = self.squares[start_cursor:]
+                if mode == "grouped":
+                    remaining = order_by_color(remaining, self.colors, color_order)
+                else:
+                    remaining = sorted(remaining, key=lambda sq: (sq.y, sq.x))
+                # Excluídos continuam pendentes e podem ser incluídos em outro lote.
+                remaining = ([sq for sq in remaining if color_hex(self.colors[sq]) not in excluded] +
+                             [sq for sq in remaining if color_hex(self.colors[sq]) in excluded])
+                self.squares[start_cursor:] = remaining
+                self.sequence_mode = sequence_mode
+            squares = self.squares[start_cursor:start_cursor + min(requested, eligible)]
+            colors = self.colors.copy()
             window_handle = self.window_handle
             window_title = self.window_title
             self.total = len(squares)
@@ -232,6 +276,7 @@ class Session:
                     ROOT / "apos_conta_gotas.png" if mode == "per_pixel" else None,
                     mode=mode, on_progress=progress, stop_event=self.stop_event,
                     window_title=window_title, window_handle=window_handle,
+                    colors=colors,
                 )
                 with self.lock:
                     self.completed = done
@@ -268,6 +313,7 @@ class Session:
                 "total": self.total,
                 "cursor": self.cursor,
                 "remaining": len(self.squares) - self.cursor,
+                "colors": self.color_summary(),
                 "message": self.message,
             }
 
@@ -376,7 +422,7 @@ def make_handler(session: Session, token: str):
                 elif path == "/api/roi":
                     result = session.update_roi(body.get("roi"))
                 elif path == "/api/start":
-                    result = session.start(body.get("mode"), body.get("speed"), body.get("limit"), body.get("version"))
+                    result = session.start(body.get("mode"), body.get("speed"), body.get("limit"), body.get("version"), body.get("color_order", "fewest"), body.get("excluded_colors"))
                 elif path == "/api/stop":
                     result = session.stop()
                 else:
