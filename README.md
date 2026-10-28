@@ -1,4 +1,4 @@
-foi feito com ajuda de ia e tenho 0 comprometimento. atualização desse projeto vai depender da minha continuidade jogando no wplace
+atualização desse projeto vai depender da minha continuidade jogando no wplace
 
 # Assistente de Pixels
 
